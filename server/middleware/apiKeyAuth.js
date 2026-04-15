@@ -97,7 +97,9 @@ const apiKeyAuth = async (req, res, next) => {
       
       try {
         await redis.setex(cacheKey, TTL.API_KEY, JSON.stringify(keyDataCache));
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Redis write error (apiKeyAuth):', e.message);
+      }
       
       // Map for the request payload later
       keyRecord = keyDataCache;

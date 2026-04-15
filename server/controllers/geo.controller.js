@@ -27,10 +27,14 @@ const getStates = async (req, res, next) => {
     const startTime = Date.now();
     const cacheKey  = 'geo:states:all';
 
-    // Cache check
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    // Cache check (Fail-soft)
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (getStates):', e.message);
     }
 
     const states = await prisma.state.findMany({
@@ -38,7 +42,11 @@ const getStates = async (req, res, next) => {
       orderBy: { name: 'asc' },
     });
 
-    await redis.setex(cacheKey, TTL.STATES, JSON.stringify(states));
+    try {
+      await redis.setex(cacheKey, TTL.STATES, JSON.stringify(states));
+    } catch (e) {
+      console.warn('Redis write error (getStates):', e.message);
+    }
     return sendSuccess(res, states, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
@@ -50,9 +58,13 @@ const getDistricts = async (req, res, next) => {
     const { id }     = req.params;
     const cacheKey   = `geo:districts:state:${id}`;
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (getDistricts):', e.message);
     }
 
     const districts = await prisma.district.findMany({
@@ -65,7 +77,11 @@ const getDistricts = async (req, res, next) => {
       return sendError(res, 404, 'NOT_FOUND', `No districts found for state id ${id}`);
     }
 
-    await redis.setex(cacheKey, TTL.DISTRICTS, JSON.stringify(districts));
+    try {
+      await redis.setex(cacheKey, TTL.DISTRICTS, JSON.stringify(districts));
+    } catch (e) {
+      console.warn('Redis write error (getDistricts):', e.message);
+    }
     return sendSuccess(res, districts, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
@@ -77,9 +93,13 @@ const getSubDistricts = async (req, res, next) => {
     const { id }    = req.params;
     const cacheKey  = `geo:subdistricts:district:${id}`;
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (getSubDistricts):', e.message);
     }
 
     const subDistricts = await prisma.subDistrict.findMany({
@@ -92,7 +112,11 @@ const getSubDistricts = async (req, res, next) => {
       return sendError(res, 404, 'NOT_FOUND', `No sub-districts found for district id ${id}`);
     }
 
-    await redis.setex(cacheKey, TTL.SUBDISTRICTS, JSON.stringify(subDistricts));
+    try {
+      await redis.setex(cacheKey, TTL.SUBDISTRICTS, JSON.stringify(subDistricts));
+    } catch (e) {
+      console.warn('Redis write error (getSubDistricts):', e.message);
+    }
     return sendSuccess(res, subDistricts, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
@@ -107,9 +131,13 @@ const getVillages = async (req, res, next) => {
     const skip      = (page - 1) * limit;
     const cacheKey  = `geo:villages:subdistrict:${id}:p${page}:l${limit}`;
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (getVillages):', e.message);
     }
 
     const villages = await prisma.village.findMany({
@@ -133,7 +161,11 @@ const getVillages = async (req, res, next) => {
     }
 
     const formatted = villages.map(formatVillage);
-    await redis.setex(cacheKey, TTL.VILLAGES, JSON.stringify(formatted));
+    try {
+      await redis.setex(cacheKey, TTL.VILLAGES, JSON.stringify(formatted));
+    } catch (e) {
+      console.warn('Redis write error (getVillages):', e.message);
+    }
     return sendSuccess(res, formatted, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
@@ -151,9 +183,13 @@ const search = async (req, res, next) => {
     const limit    = Math.min(parseInt(lim) || 25, 100);
     const cacheKey = `geo:search:${q}:${state||''}:${district||''}:${subDistrict||''}:${limit}`;
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (search):', e.message);
     }
 
     const whereClause = {
@@ -189,7 +225,11 @@ const search = async (req, res, next) => {
     });
 
     const formatted = villages.map(formatVillage);
-    await redis.setex(cacheKey, TTL.SEARCH, JSON.stringify(formatted));
+    try {
+      await redis.setex(cacheKey, TTL.SEARCH, JSON.stringify(formatted));
+    } catch (e) {
+      console.warn('Redis write error (search):', e.message);
+    }
     return sendSuccess(res, formatted, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
@@ -207,9 +247,13 @@ const autocomplete = async (req, res, next) => {
     const limit    = 10; // autocomplete always returns max 10
     const cacheKey = `geo:autocomplete:${hierarchyLevel}:${q}`;
 
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return sendSuccess(res, JSON.parse(cached), { startTime, rateLimit: req.rateLimit });
+      }
+    } catch (e) {
+      console.warn('Redis read error (autocomplete):', e.message);
     }
 
     let results = [];
@@ -242,7 +286,11 @@ const autocomplete = async (req, res, next) => {
       results = villages.map(formatVillage);
     }
 
-    await redis.setex(cacheKey, TTL.SEARCH, JSON.stringify(results));
+    try {
+      await redis.setex(cacheKey, TTL.SEARCH, JSON.stringify(results));
+    } catch (e) {
+      console.warn('Redis write error (autocomplete):', e.message);
+    }
     return sendSuccess(res, results, { startTime, rateLimit: req.rateLimit });
   } catch (err) { next(err); }
 };
