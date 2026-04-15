@@ -1,0 +1,37 @@
+# Git ignore — don't commit secrets or build artifacts
+
+# Env files
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Data output (generated files)
+data-pipeline/output/*.csv
+data-pipeline/output/*.sql
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Analysis temp files
+dataset_analysis.json
+dataset_analysis.txt
+dataset_analysis.log
+analyze_dataset.py

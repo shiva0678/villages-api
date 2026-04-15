@@ -1,0 +1,179 @@
+// ============================================================
+// Prisma Schema — All India Villages API
+// Database: NeonDB (PostgreSQL)
+// Normalization: 3NF
+// Author: Shivakumar YC | Bluestock Capstone
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum PlanType {
+  FREE        // 100 req/day
+  PREMIUM     // 10,000 req/day
+  PRO         // 100,000 req/day
+  UNLIMITED   // No limit
+}
+
+// ─── GEOGRAPHY TABLES (3NF Hierarchy) ────────────────────────
+
+// Root of hierarchy — supports future multi-country expansion
+model Country {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique                        // "India"
+  code       String   @unique @db.VarChar(5)         // "IN"
+  createdAt  DateTime @default(now())
+
+  states     State[]
+}
+
+// State level (30 states/UTs in our dataset)
+model State {
+  id         Int      @id @default(autoincrement())
+  stateCode  String   @db.VarChar(10)               // MDDS STC e.g. "29"
+  name       String                                  // "KARNATAKA"
+  countryId  Int
+  createdAt  DateTime @default(now())
+
+  country    Country    @relation(fields: [countryId], references: [id])
+  districts  District[]
+  userAccess UserStateAccess[]
+
+  @@unique([stateCode, countryId])
+  @@index([stateCode])
+}
+
+// District level (~800 districts)
+model District {
+  id           Int      @id @default(autoincrement())
+  districtCode String   @db.VarChar(10)             // MDDS DTC e.g. "241"
+  name         String                                // "North District"
+  stateId      Int
+  createdAt    DateTime @default(now())
+
+  state        State         @relation(fields: [stateId], references: [id])
+  subDistricts SubDistrict[]
+
+  @@unique([districtCode, stateId])
+  @@index([stateId])                                 // Join performance
+}
+
+// Sub-District / Taluka / Block level (~6,000)
+model SubDistrict {
+  id               Int      @id @default(autoincrement())
+  subDistrictCode  String   @db.VarChar(10)         // MDDS Sub_DT e.g. "01547"
+  name             String                            // "Chungthang"
+  districtId       Int
+  createdAt        DateTime @default(now())
+
+  district  District  @relation(fields: [districtId], references: [id])
+  villages  Village[]
+
+  @@unique([subDistrictCode, districtId])
+  @@index([districtId])                              // Join performance
+}
+
+// Village / Area level (~4,62,000 records)
+model Village {
+  id            Int      @id @default(autoincrement())
+  villageCode   String   @db.VarChar(15)            // MDDS PLCN e.g. "260925"
+  name          String                               // "Lachen"
+  subDistrictId Int
+  createdAt     DateTime @default(now())
+
+  subDistrict SubDistrict @relation(fields: [subDistrictId], references: [id])
+
+  @@unique([villageCode, subDistrictId])
+  @@index([subDistrictId])                           // Hierarchical queries
+  @@index([name])                                    // Text search (name lookup)
+}
+
+// ─── USER & AUTH TABLES ───────────────────────────────────────
+
+// B2B client accounts + admin users
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String                                // bcrypt hashed
+  businessName String?                               // Company Name
+  phoneNumber  String?                               // With country code
+  gstNumber    String?                               // Optional for invoicing
+  role         Role     @default(CLIENT)
+  plan               PlanType @default(FREE)
+  customDailyLimit   Int?                                  // Manual override for enterprise
+  customBurstLimit   Int?                                  // Manual override for burst
+  autoSuspendEnabled Boolean  @default(false)              // Suspend automatically at 100%?
+  isSuspended        Boolean  @default(false)              // Manual or auto suspension status
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  apiKeys      ApiKey[]
+  apiLogs      ApiLog[]
+  stateAccess  UserStateAccess[]
+}
+
+// API credentials issued to B2B clients
+model ApiKey {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  name       String   @default("Default Key")        // e.g. "Production Server"
+  key        String   @unique                        // Public key (PREFIX_random)
+  secretHash String                                  // bcrypt hashed secret
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+
+  user    User     @relation(fields: [userId], references: [id])
+  apiLogs ApiLog[]
+
+  @@index([key])                                     // Fast auth lookups
+}
+
+// Access control — which states a client can query
+// (For tiered plans: FREE = limited states, PRO = all)
+model UserStateAccess {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  stateId   Int
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  state State @relation(fields: [stateId], references: [id])
+
+  @@unique([userId, stateId])
+}
+
+// API usage logs — for analytics and billing
+model ApiLog {
+  id             Int      @id @default(autoincrement())
+  apiKeyId       Int
+  userId         Int
+  endpoint       String                              // e.g. "/api/v1/villages"
+  method         String   @db.VarChar(10)            // GET, POST
+  statusCode     Int                                 // 200, 401, 429, etc.
+  responseTimeMs Int                                 // milliseconds
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([apiKeyId])
+  @@index([userId])
+  @@index([createdAt])                               // Time-series analytics
+  @@index([userId, createdAt])                       // Per-user time analytics
+}
