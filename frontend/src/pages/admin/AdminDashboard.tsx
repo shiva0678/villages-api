@@ -1,5 +1,5 @@
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api';
 
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {planDistribution.map((entry: any, index: number) => (
+                    {planDistribution.map((_entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
