@@ -11,8 +11,8 @@ const swaggerSpec = {
     description: 'High-performance API for geographical census data. Includes autocomplete, hierarchical states, and sub-districts limit-based fetching.'
   },
   servers: [
-    { url: 'http://localhost:5000/v1', description: 'Local Development' },
-    { url: 'https://api.villageapi.com/v1', description: 'Production' }
+    { url: '/v1', description: 'Current Environment' },
+    { url: 'http://localhost:3000/v1', description: 'Local Development' }
   ],
   components: {
     securitySchemes: {
