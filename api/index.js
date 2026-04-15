@@ -6,9 +6,9 @@ require('dotenv').config();
 const express      = require('express');
 const cors         = require('cors');
 const morgan       = require('morgan');
-const errorHandler = require('./middleware/errorHandler');
-const geoRoutes    = require('./routes/geo.routes');
-const authRoutes   = require('./routes/auth.routes');
+const errorHandler = require('./src/middleware/errorHandler');
+const geoRoutes    = require('./src/routes/geo.routes');
+const authRoutes   = require('./src/routes/auth.routes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -55,8 +55,8 @@ app.get('/health', (req, res) => {
 // ─── API Routes ───────────────────────────────────────────────────────────────
 // Production:  https://api.villageapi.com/v1/
 // Local:       http://localhost:3000/v1/
-const adminRoutes  = require('./routes/admin.routes');
-const portalRoutes = require('./routes/portal.routes');
+const adminRoutes  = require('./src/routes/admin.routes');
+const portalRoutes = require('./src/routes/portal.routes');
 app.use('/v1/auth', authRoutes);
 app.use('/v1/admin', adminRoutes);
 app.use('/v1/portal', portalRoutes);
