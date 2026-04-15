@@ -11,6 +11,7 @@ import ClientKeys from './pages/client/ClientKeys';
 import ClientDocs from './pages/client/ClientDocs';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -29,16 +30,48 @@ function App() {
             <Route path="/register" element={<Register />} />
             
             {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/usage-alerts" element={<AdminUsageAlerts />} />
-            <Route path="/admin/villages" element={<AdminVillages />} />
-            <Route path="/admin/logs" element={<AdminLogs />} />
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminUsers />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/usage-alerts" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminUsageAlerts />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/villages" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminVillages />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/logs" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminLogs />
+              </ProtectedRoute>
+            } />
             
             {/* Client Routes */}
-            <Route path="/portal" element={<ClientPortal />} />
-            <Route path="/portal/keys" element={<ClientKeys />} />
-            <Route path="/portal/docs" element={<ClientDocs />} />
+            <Route path="/portal" element={
+              <ProtectedRoute allowedRoles={['CLIENT']}>
+                <ClientPortal />
+              </ProtectedRoute>
+            } />
+            <Route path="/portal/keys" element={
+              <ProtectedRoute allowedRoles={['CLIENT']}>
+                <ClientKeys />
+              </ProtectedRoute>
+            } />
+            <Route path="/portal/docs" element={
+              <ProtectedRoute allowedRoles={['CLIENT']}>
+                <ClientDocs />
+              </ProtectedRoute>
+            } />
             
             {/* 404 */}
             <Route path="*" element={<div className="p-8 text-center bg-background min-h-screen flex flex-col items-center justify-center"><h1 className="text-4xl font-bold text-primary">404</h1><p className="text-muted-foreground mt-2">Page Not Found</p></div>} />
